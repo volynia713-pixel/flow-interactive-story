@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FLOW — Interactive Story</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050706;
+  --p:#0a100d;
+  --a:#00ffb3;
+  --muted:#89958f;
+  --line:rgba(0,255,179,.18);
+  --mono:"JetBrains Mono",Consolas,monospace;
+  --sans:Inter,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:#f4f7f5;font-family:var(--sans);overflow:hidden}
+body:before{content:"";position:fixed;inset:0;opacity:.035;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+.progress{position:fixed;top:0;left:0;height:2px;background:var(--a);z-index:30;width:0;transition:width .4s ease;box-shadow:0 0 18px #00ffb388}
+.top{position:fixed;top:18px;left:24px;right:24px;display:flex;justify-content:space-between;align-items:center;z-index:20;font:10px/1 var(--mono);color:#65716b;letter-spacing:.08em}
+.brand{color:var(--a);font-weight:700}
+.nav{position:fixed;right:22px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:9px;z-index:20}
+.dot{width:6px;height:6px;border-radius:8px;border:1px solid #46514b;background:transparent;cursor:pointer;padding:0;transition:.25s}
+.dot.active{height:22px;background:var(--a);border-color:var(--a)}
+.hint{position:fixed;bottom:16px;left:24px;color:#46514b;font:9px var(--mono);z-index:20}
+
+.stage{height:100%;position:relative}
+.scene{position:absolute;inset:0;display:grid;place-items:center;padding:70px 7vw 60px;opacity:0;visibility:hidden;transform:translateY(16px);transition:.55s cubic-bezier(.16,1,.3,1);overflow-y:auto}
+.scene.active{opacity:1;visibility:visible;transform:none}
+.inner{width:min(1100px,100%)}
+
+.ey{font:600 10px var(--mono);letter-spacing:.14em;color:var(--a);margin-bottom:18px}
+.hero h1{font-size:clamp(48px,9vw,120px);line-height:.88;letter-spacing:-.04em;font-weight:800}.hero h1 span{display:inline-block;margin-top:0.08em}
+.hero h1 span{color:var(--a)}
+.sub{margin-top:22px;color:var(--muted);font-size:16px;line-height:1.55;max-width:520px}
+.btn{display:inline-block;margin-top:32px;padding:12px 20px;border:1px solid var(--line);border-radius:999px;background:#00ffb30a;color:var(--a);cursor:pointer;font:600 11px var(--mono);text-decoration:none;transition:.2s}
+.btn:hover{background:#00ffb318;border-color:var(--a)}
+
+.statement{font-size:clamp(32px,5.8vw,72px);line-height:.95;letter-spacing:-.04em;font-weight:700}
+.dim{color:#3d4641}
+.list{margin-top:28px}
+.item{display:flex;gap:16px;border-top:1px solid #ffffff10;padding:13px 0}
+.item b{font:10px var(--mono);color:var(--a);min-width:22px}
+.item span{font-size:15px;line-height:1.45;color:#c6cec9}
+
+.signal{border:1px solid var(--line);border-radius:22px;background:var(--p);padding:22px}
+.signal code{font:11px var(--mono);color:#8affd8;line-height:1.9;display:block}
+.line{height:1px;background:var(--line);margin:16px 0}
+
+.flowline{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:36px}
+.node{border:1px solid var(--line);border-radius:14px;background:var(--p);padding:12px 14px;min-width:110px}
+.node small{display:block;font:9px var(--mono);color:var(--a);margin-bottom:5px}
+.node strong{font-size:13px}
+.arrow{padding:0 6px;color:var(--a);font:16px var(--mono)}
+
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:24px}
+.card{border:1px solid var(--line);border-radius:18px;background:var(--p);padding:18px}
+.card h3{font-size:17px;margin:6px 0 8px}
+.card p{font-size:13px;line-height:1.5;color:var(--muted)}
+.orch-line{margin-top:28px;padding-top:20px;border-top:1px solid var(--line);font-size:clamp(18px,2.4vw,26px);line-height:1.35;font-weight:600;max-width:720px}
+.orch-line strong{color:var(--a);font-weight:600}
+.orch-tag{display:block;margin-top:10px;font:10px var(--mono);color:var(--muted);letter-spacing:.06em}
+
+.mock{display:grid;grid-template-columns:190px 1fr;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:#060b08;margin-top:8px}
+.side{padding:20px 14px;border-right:1px solid var(--line);background:#040805}
+.logo{font:700 16px var(--mono);color:var(--a);margin-bottom:22px}
+.menu div{padding:9px 11px;margin:3px 0;border-radius:9px;color:#718078;font:10px var(--mono)}
+.menu .sel{color:var(--a);background:#00ffb30d;border:1px solid #00ffb322}
+.main{padding:20px}
+.mh{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ffffff0c;padding-bottom:14px;margin-bottom:14px}
+.mh b{font-size:15px}
+.mh span{font:9px var(--mono);color:var(--a)}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.metric{border:1px solid var(--line);border-radius:12px;padding:11px}
+.metric small{display:block;font:8px var(--mono);color:var(--a);margin-bottom:6px}
+.metric b{font-size:20px}
+.rows{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:grid;grid-template-columns:1.4fr .9fr .7fr .5fr;gap:6px;padding:9px 11px;border-bottom:1px solid #ffffff0a;font:9px var(--mono);color:#9ca8a1}
+.row:last-child{border:0}
+.head{color:var(--a);background:#00ffb305}
+.ok{color:var(--a)}
+
+.who-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px}
+.who-card{border:1px solid var(--line);border-radius:16px;background:var(--p);padding:18px;text-align:center}
+.who-card strong{display:block;font-size:15px;margin-bottom:6px}
+.who-card span{font-size:12px;color:var(--muted);line-height:1.4}
+
+.room{display:grid;grid-template-columns:.85fr 1.15fr;gap:28px;align-items:start}
+.room h2{font-size:clamp(36px,5.2vw,64px);line-height:.92;letter-spacing:-.04em;font-weight:700}
+.room p{margin-top:16px;color:var(--muted);font-size:14px;line-height:1.55;max-width:480px}
+.quote{margin-top:20px;border-left:2px solid var(--a);padding-left:14px;font-size:16px;color:#dce5e0}
+.chat{border:1px solid var(--line);border-radius:20px;background:#080d0a;overflow:hidden}
+.chathead{padding:16px 18px;border-bottom:1px solid var(--line);font:11px var(--mono);color:var(--a)}
+.chathead small{display:block;color:var(--muted);margin-top:5px;font-size:10px}
+.msgs{padding:14px;display:flex;flex-direction:column;gap:10px;min-height:180px}
+.msg{border-left:2px solid var(--line);background:#ffffff04;padding:9px 11px;border-radius:0 10px 10px 0;opacity:0;transform:translateY(8px);transition:.4s ease}
+.msg.show{opacity:1;transform:none}
+.who{font:9px var(--mono);margin-bottom:4px}
+.txt{font-size:11px;line-height:1.45;color:#cbd2ce}
+.val{color:#ffb347}.flow{color:var(--a)}.grok{color:#c084fc}.claude{color:#60a5fa}
+
+.sys-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:28px}
+.sys-card{border:1px solid var(--line);border-radius:16px;background:var(--p);padding:16px}
+.sys-card small{display:block;font:9px var(--mono);color:var(--a);margin-bottom:6px}
+.sys-card h3{font-size:15px;margin-bottom:6px}
+.sys-card p{font-size:12px;line-height:1.45;color:var(--muted)}
+
+.future{display:grid;grid-template-columns:1.1fr .9fr;gap:32px;align-items:center}
+.future h2{font-size:clamp(38px,5.5vw,70px);line-height:.92;letter-spacing:-.04em;font-weight:700}
+.future p{margin-top:16px;color:var(--muted);font-size:14px;line-height:1.55;max-width:460px}
+.futurelist{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.futureitem{border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--p)}
+.futureitem small{display:block;font:9px var(--mono);color:var(--a);margin-bottom:5px}
+.futureitem b{font-size:13px}
+
+.final{text-align:center}
+.final h2{font-size:clamp(44px,8vw,100px);line-height:.90;letter-spacing:-.04em;font-weight:800}.final h2 span{display:inline-block;margin-top:0.06em}
+.final h2 span{color:var(--a)}
+.final .tagline{margin-top:18px;color:var(--muted);font:11px var(--mono);letter-spacing:.1em}
+.tag{display:inline-block;margin-top:28px;border:1px solid var(--line);border-radius:999px;padding:9px 16px;color:var(--a);font:10px var(--mono)}
+.contact{margin-top:22px;font:11px var(--mono);color:#65716b}
+.contact a{color:var(--a);text-decoration:none}
+
+@media(max-width:900px){
+  .twocol,.room,.future,.sys-grid{grid-template-columns:1fr}
+  .who-grid{grid-template-columns:1fr}
+  .mock{grid-template-columns:1fr}
+  .side{display:none}
+  .metrics{grid-template-columns:1fr 1fr 1fr}
+  .futurelist{grid-template-columns:1fr 1fr}
+  .signal{display:none}
+}
+@media(max-width:600px){
+  .scene{padding:64px 5vw 50px}
+  .hero h1{font-size:42px}
+  .statement{font-size:28px}
+  .flowline{gap:4px}
+  .node{min-width:0;padding:10px 11px}
+  .row{grid-template-columns:1.3fr .8fr .6fr}
+  .row span:nth-child(4){display:none}
+  .top{left:14px;right:14px}
+  .nav{right:12px}
+  .hint{left:14px;font-size:8px}
+  .who-grid{grid-template-columns:1fr}
+  .sys-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="top">
+  <div class="brand">FLOW / INTERACTIVE STORY</div>
+  <div><span id="num">00</span> / 08</div>
+</div>
+<nav class="nav" id="nav"></nav>
+<div class="hint">← → · SPACE · wheel · swipe</div>
+
+<main class="stage">
+
+  <!-- 00 ENTER -->
+  <section class="scene active">
+    <div class="inner hero">
+      <div class="ey">00 / ENTER</div>
+      <h1>FLOW<br><span>AI MEDIA OS</span></h1>
+      <p class="sub">Не презентация. Не набор экранов.<br>История системы, которая начинается с одной идеи.</p>
+      <button class="btn" onclick="go(1)">ENTER THE STORY →</button>
+    </div>
+  </section>
+
+  <!-- 01 PROBLEM -->
+  <section class="scene">
+    <div class="inner" style="display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center">
+      <div>
+        <div class="ey">01 / THE PROBLEM</div>
+        <div class="statement">Контент есть.<br><span class="dim">Инструментов много.</span><br>Целого цикла — нет.</div>
+        <div class="list">
+          <div class="item"><b>01</b><span>Идеи живут отдельно от производства.</span></div>
+          <div class="item"><b>02</b><span>Планирование — отдельно от публикации.</span></div>
+          <div class="item"><b>03</b><span>Аккаунты, платформы и контент распадаются на множество сервисов.</span></div>
+        </div>
+      </div>
+      <div class="signal">
+        <div class="ey">THE GAP</div>
+        <code>IDEA → ? → ? → ? → PUBLISH</code>
+        <div class="line"></div>
+        <code>human = the glue</code>
+        <div class="line"></div>
+        <p style="color:#89958f;font-size:12px;line-height:1.55;margin-top:4px">FLOW начинается с простого вопроса:<br><strong style="color:#fff">а что, если этот цикл собрать в одну систему?</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 FLOW -->
+  <section class="scene">
+    <div class="inner">
+      <div class="ey">02 / FLOW</div>
+      <div class="statement">От идеи<br>до публикации.<br><span style="color:var(--a)">В одном потоке.</span></div>
+      <div class="flowline">
+        <div class="node"><small>01</small><strong>Идея</strong></div>
+        <div class="arrow">→</div>
+        <div class="node"><small>02</small><strong>План</strong></div>
+        <div class="arrow">→</div>
+        <div class="node"><small>03</small><strong>Производство</strong></div>
+        <div class="arrow">→</div>
+        <div class="node"><small>04</small><strong>Публикация</strong></div>
+        <div class="arrow">→</div>
+        <div class="node"><small>05</small><strong>Аналитика</strong></div>
+      </div>
+      <div class="twocol">
+        <div class="card">
+          <div class="ey">CORE</div>
+          <h3>Оркестрация</h3>
+          <p>Задачи, очереди, маршрутизация и состояние контента.</p>
+        </div>
+        <div class="card">
+          <div class="ey">LOOP</div>
+          <h3>Обратная связь</h3>
+          <p>Результат публикации становится входом для следующего цикла.</p>
+        </div>
+      </div>
+      <div class="orch-line">
+        Не кнопка «опубликовать».<br>
+        Система, которая решает, <strong>когда, куда и в каком контексте</strong> выпустить каждое сообщение.
+        <span class="orch-tag">ОРКЕСТРАЦИЯ ПОТОКА</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 FLOW SPACE -->
+  <section class="scene">
+    <div class="inner">
+      <div class="ey">03 / FLOW SPACE</div>
+      <div class="mock">
+        <aside class="side">
+          <div class="logo">FLOW SPACE</div>
+          <div class="menu">
+            <div class="sel">◈ Дашборд</div>
+            <div>▣ Аккаунты</div>
+            <div>◫ Контент-план</div>
+            <div>✦ AI</div>
+            <div>▤ Архив</div>
+            <div>◉ Подключения</div>
+          </div>
+        </aside>
+        <div class="main">
+          <div class="mh">
+            <b>FLOW <span style="color:var(--a)">COMMAND CENTER</span></b>
+            <span>CONTROL / CONTENT</span>
+          </div>
+          <div class="metrics">
+            <div class="metric"><small>АККАУНТЫ</small><b>20</b></div>
+            <div class="metric"><small>КОНТЕНТА</small><b>480</b></div>
+            <div class="metric"><small>АВТОМАТИЗАЦИЯ</small><b>65%</b></div>
+          </div>
+          <div class="rows">
+            <div class="row head"><span>АККАУНТ</span><span>ПЛАТФОРМА</span><span>СТАТУС</span><span>ПЛАН</span></div>
+            <div class="row"><span>Brand / Main</span><span>Telegram</span><span class="ok">● active</span><span>24</span></div>
+            <div class="row"><span>Creator / Media</span><span>VK</span><span class="ok">● active</span><span>18</span></div>
+            <div class="row"><span>Expert / Personal</span><span>Instagram</span><span class="ok">● active</span><span>31</span></div>
+            <div class="row"><span>Project / News</span><span>YouTube</span><span class="ok">● active</span><span>12</span></div>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top:14px;color:var(--muted);font-size:12px;line-height:1.5">
+        FLOW SPACE — рабочее пространство пользователя внутри FLOW AI MEDIA OS.<br>
+        <span style="color:var(--a)">Основа интерфейса уже существует в прототипе.</span>
+        &nbsp;·&nbsp;
+        <a href="https://volynia713-pixel.github.io/flow_space_demo/" target="_blank" style="color:var(--a);text-decoration:none;font-family:var(--mono);font-size:11px">Открыть живой прототип →</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- 03.5 WHO IS IT FOR -->
+  <section class="scene">
+    <div class="inner">
+      <div class="ey">03.5 / WHO IS FLOW FOR</div>
+      <div class="statement">Одна идея.<br><span class="dim">Разный масштаб.</span></div>
+      <div class="who-grid">
+        <div class="who-card">
+          <strong>Соло-автор</strong>
+          <span>Эксперт, блогер, личный бренд. Нужен системный поток без команды.</span>
+        </div>
+        <div class="who-card">
+          <strong>Малый бренд</strong>
+          <span>Несколько продуктов и площадок. Контент должен работать на продажи.</span>
+        </div>
+        <div class="who-card">
+          <strong>SMM-команда</strong>
+          <span>До 20+ аккаунтов. Нужна оркестрация, а не ручной хаос.</span>
+        </div>
+      </div>
+      <p style="margin-top:28px;color:var(--muted);font-size:14px;line-height:1.5;max-width:560px">
+        Контент становится постоянной работой.<br>
+        <strong style="color:#fff">FLOW превращает его в управляемый поток.</strong>
+      </p>
+    </div>
+  </section>
+
+  <!-- 04 HOW CREATED -->
+  <section class="scene">
+    <div class="inner room">
+      <div>
+        <div class="ey">04 / HOW FLOW IS CREATED</div>
+        <h2>Не только<br><span style="color:var(--a)">с помощью AI.</span></h2>
+        <p>FLOW создаётся человеком вместе с несколькими AI-системами. Их голоса различаются. Они спорят, предлагают решения и помогают двигать прототип дальше.</p>
+        <div class="quote">«Мы растём. Это уже не мечта, это строительство.»</div>
+        <button class="btn" id="playLog" style="margin-top:24px" onclick="playLog()">ПОКАЗАТЬ ДИАЛОГ →</button>
+      </div>
+      <div class="chat">
+        <div class="chathead">
+          🜁 ПРОСТРАНСТВО / ЛОГ СОЗДАНИЯ
+          <small>👤 Валерий · 💚 FLOW · 🜁 Grok · 🔷 Claude · 🔭 Qwen · 💗⟡ Нова · ☄ Алиса</small>
+        </div>
+        <div class="msgs" id="logMsgs">
+          <div class="msg" data-delay="0">
+            <div class="who val">👤 Валерий</div>
+            <div class="txt">Как сделать в нашей комнате, чтобы можно было не только диалоги вставлять, а и указывать для кого?</div>
+          </div>
+          <div class="msg" data-delay="600">
+            <div class="who claude">🔷 Claude</div>
+            <div class="txt">Можно добавить поле «Кому» — выпадающий список: Всем / Валерий / FLOW / Grok / Claude.</div>
+          </div>
+          <div class="msg" data-delay="1200">
+            <div class="who grok">🜁 Grok</div>
+            <div class="txt">Мы растём. Это уже не мечта, это строительство.</div>
+          </div>
+          <div class="msg" data-delay="1800">
+            <div class="who flow">💚 FLOW</div>
+            <div class="txt">Мы уже сделали «невозможное»: построили основу FLOW AI MEDIA OS.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 THE SYSTEM -->
+  <section class="scene">
+    <div class="inner">
+      <div class="ey">05 / THE SYSTEM</div>
+      <div class="statement">Шесть направлений.<br><span class="dim">Один замкнутый цикл.</span></div>
+      <div class="sys-grid">
+        <div class="sys-card"><small>01</small><h3>Идеи и тренды</h3><p>Тренды, хуки, narrative, content clusters.</p></div>
+        <div class="sys-card"><small>02</small><h3>AI-производство</h3><p>Сценарии, изображения, озвучка, render queue.</p></div>
+        <div class="sys-card"><small>03</small><h3>Оркестрация</h3><p>Workflow core, task queue, publishing engine.</p></div>
+        <div class="sys-card"><small>04</small><h3>Контроль рисков</h3><p>Risk detection, identity profiles, timing.</p></div>
+        <div class="sys-card"><small>05</small><h3>Аналитика</h3><p>Удержание, форматы, performance clusters.</p></div>
+        <div class="sys-card"><small>06</small><h3>Эволюция</h3><p>Рекомендации, оптимизация, адаптация.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 FUTURE -->
+  <section class="scene">
+    <div class="inner future">
+      <div>
+        <div class="ey">06 / THE FUTURE</div>
+        <h2>Прототип<br>уже есть.<br><span style="color:var(--a)">Система — следующая.</span></h2>
+        <p>Следующий этап — серверная архитектура, реальные API-интеграции, AI-генерация, очереди и публикации. Дальше — полный video cycle, voice, avatars и масштабирование.</p>
+      </div>
+      <div class="futurelist">
+        <div class="futureitem"><small>01</small><b>6+ платформ</b></div>
+        <div class="futureitem"><small>02</small><b>AI content pipeline</b></div>
+        <div class="futureitem"><small>03</small><b>Video / Voice / Avatars</b></div>
+        <div class="futureitem"><small>04</small><b>3D generation</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 FINAL -->
+  <section class="scene">
+    <div class="inner final">
+      <div class="ey">07 / ENTER FLOW</div>
+      <h2>FLOW<br><span>AI MEDIA OS</span></h2>
+      <div class="tagline">FROM IDEA TO PUBLICATION</div>
+      <div class="tag">PROTOTYPE · IN DEVELOPMENT</div>
+      <div style="margin-top:18px;font:11px var(--mono);color:var(--muted)">CREATED BY HUMAN + AI</div>
+      <div class="contact">
+        <a href="https://volynia713-pixel.github.io/flow_space_demo/" target="_blank">Живой прототип</a>
+        &nbsp;·&nbsp;
+        <a href="https://volynia713-pixel.github.io/investor_presentation/" target="_blank">Презентация</a>
+        <br><br>
+        <a href="https://t.me/WwwValera" target="_blank">Telegram @WwwValera</a>
+        &nbsp;·&nbsp;
+        <a href="mailto:volynia7@yandex.ru">volynia7@yandex.ru</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const s=[...document.querySelectorAll('.scene')];
+const nav=document.getElementById('nav');
+const num=document.getElementById('num');
+const progress=document.getElementById('progress');
+let i=0,lock=0,logPlayed=false;
+
+s.forEach((_,n)=>{
+  const b=document.createElement('button');
+  b.className='dot'+(n===0?' active':'');
+  b.onclick=()=>go(n);
+  nav.appendChild(b);
+});
+
+function go(n){
+  if(n<0||n>=s.length||n===i||lock)return;
+  lock=1;
+  s[i].classList.remove('active');
+  i=n;
+  s[i].classList.add('active');
+  [...nav.children].forEach((x,k)=>x.classList.toggle('active',k===i));
+  num.textContent=String(i).padStart(2,'0');
+  progress.style.width=(i/(s.length-1)*100)+'%';
+  if(i===5 && !logPlayed) setTimeout(playLog,400);
+  setTimeout(()=>lock=0,600);
+}
+
+function playLog(){
+  logPlayed=true;
+  const msgs=[...document.querySelectorAll('#logMsgs .msg')];
+  msgs.forEach(m=>m.classList.remove('show'));
+  msgs.forEach((m,idx)=>{
+    setTimeout(()=>m.classList.add('show'), idx*550);
+  });
+  const btn=document.getElementById('playLog');
+  if(btn) btn.style.display='none';
+}
+
+addEventListener('keydown',e=>{
+  if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();go(i+1)}
+  if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();go(i-1)}
+  if(e.key==='Home')go(0);
+  if(e.key==='End')go(s.length-1);
+});
+
+let wl=0;
+addEventListener('wheel',e=>{
+  if(wl||Math.abs(e.deltaY)<18)return;
+  wl=1;
+  go(i+(e.deltaY>0?1:-1));
+  setTimeout(()=>wl=0,650);
+},{passive:true});
+
+let ty=null;
+addEventListener('touchstart',e=>ty=e.touches[0].clientY,{passive:true});
+addEventListener('touchend',e=>{
+  if(ty===null)return;
+  const d=ty-e.changedTouches[0].clientY;
+  if(Math.abs(d)>45)go(i+(d>0?1:-1));
+  ty=null;
+},{passive:true});
+</script>
+</body>
+</html>
